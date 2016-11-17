@@ -34,7 +34,7 @@ function handle(e) {
   area.value += text;
 
   if (form.elements[e.type + 'Stop'].checked) {
-    e.preventDefault();
+         e.preventDefault();
   }
 }
 
