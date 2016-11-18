@@ -79,6 +79,8 @@
             // it's ugly and wrong. The right answer is to refactor term.js to use
             // ArrayBuffer with uint8 and convert runes on the fly on the client
             term.on('data', function (data) {
+                //data += '\n'
+                console.log("Data(" + data + ")length=" + data.length);
                 sock.send(JSON.stringify({
                     type: "data",
                     "data": data

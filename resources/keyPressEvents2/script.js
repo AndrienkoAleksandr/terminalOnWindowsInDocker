@@ -4,15 +4,16 @@ var lastTime = Date.now();
 
 function handle(e) {
 
-  if ("keydown" == e.type) {
-    console.log("test")
-    return
-  }
+//  if ("keydown" == e.type) {
+//    console.log("test")
+//    return
+//  }
 
   if (form.elements[e.type + 'Ignore'].checked) return;
 
   var text = e.type +
     ' keyCode=' + e.keyCode +
+    ' KEY=' + e.key +
     ' which=' + e.which +
     ' charCode=' + e.charCode +
     ' char=' + String.fromCharCode(e.keyCode || e.charCode) +
@@ -23,7 +24,7 @@ function handle(e) {
 
   symbol = getChar2(e)
   if (symbol != null) {
-    text += "unicode key " + symbol + "\n"
+    text += " type " + e.type  + " unicode key " + symbol + "\n"
   }
 
   if (area.value && Date.now() - lastTime > 250) {

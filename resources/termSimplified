@@ -451,7 +451,7 @@ Terminal.defaults = {
   convertEol: false,
   termName: 'xterm',
   geometry: [80, 24],
-  cursorBlink: true,
+  cursorBlink: false,
   visualBell: false,
   popOnBell: false,
   scrollback: 1000,
@@ -527,42 +527,11 @@ Terminal.prototype.initGlobal = function() {
   }
   Terminal._boundDocs.push(document);
 
-  Terminal.bindPaste(document);
-
   Terminal.bindKeys(document);
-
-  Terminal.bindCopy(document);
-
-  if (this.isMobile) {
-    this.fixMobile(document);
-  }
 
   if (this.useStyle) {
     Terminal.insertStyle(document, this.colors[256], this.colors[257]);
   }
-};
-
-/**
- * Bind to paste event
- */
-
-Terminal.bindPaste = function(document) {
-  // This seems to work well for ctrl-V and middle-click,
-  // even without the contentEditable workaround.
-  var window = document.defaultView;
-  on(window, 'paste', function(ev) {
-    var term = Terminal.focus;
-    if (!term) return;
-    if (ev.clipboardData) {
-      term.send(ev.clipboardData.getData('text/plain'));
-    } else if (term.context.clipboardData) {
-      term.send(term.context.clipboardData.getData('Text'));
-    }
-    Terminal.setDefaultFocus();
-    // Not necessary. Do it anyway for good measure.
-    term.element.contentEditable = 'inherit';
-    return cancel(ev);
-  });
 };
 
 /**
@@ -572,139 +541,73 @@ Terminal.bindPaste = function(document) {
 Terminal.bindKeys = function(document) {
   // We should only need to check `target === body` below,
   // but we can check everything for good measure.
-  on(document, 'keydown', function(ev) {
-    if (!Terminal.focus) return;
-    var target = ev.target || ev.srcElement;
-    if (!target) return;
-    if (target === Terminal.focus.element
-        || target === Terminal.focus.context
-        || target === Terminal.focus.document
-        || target === Terminal.focus.body
-        || target === Terminal._textarea
-        || target === Terminal.focus.parent) {
-      return Terminal.focus.keyDown(ev);
-    }
-  }, true);
+// on(document, 'keydown', function(ev) {
+//    if (!Terminal.focus) return;
+//    var target = ev.target || ev.srcElement;
+//    if (!target) return;
+//    if (target === Terminal.focus.element
+//        || target === Terminal.focus.context
+//        || target === Terminal.focus.document
+//        || target === Terminal.focus.body
+//        || target === Terminal._textarea
+//        || target === Terminal.focus.parent) {
+//      return Terminal.focus.keyDown(ev);
+//    }
+//  }, true);
+
+//     target.onkeypress=function(ev){
+//        console.log("keypress")
+//        console.log(ev)
+//        console.log(getChar(ev))
+//        console.log("keypress")
+//     };
+
+//    on(document, 'keydown', function(ev) {
+//         if (!Terminal.focus) return;
+//         var target = ev.target || ev.srcElement;
+//         if (!target) return;
+//         target.onkeydown=function(ev) {
+//            console.log("keydown")
+//            console.log(ev)
+//            console.log("keydown")
+//         };
+//    });
+
+    on(document, 'keydown', function(ev) {
+         if (!Terminal.focus) return;
+         var target = ev.target || ev.srcElement;
+         if (!target) return;
+         if (target === Terminal.focus.element
+             || target === Terminal.focus.context
+             || target === Terminal.focus.document
+             || target === Terminal.focus.body
+             || target === Terminal._textarea
+             || target === Terminal.focus.parent) {
+//             target.onkeydown=function(ev) {
+//                 console.log("keydown")
+//                 console.log(ev)
+//                 console.log("keydown")
+//             };
+
+             return Terminal.focus.keyDown(ev);
+
+//                console.log("keydown")
+//                console.log(ev)
+
+         }
+    });
 
   on(document, 'keypress', function(ev) {
     if (!Terminal.focus) return;
     var target = ev.target || ev.srcElement;
     if (!target) return;
-    if (target === Terminal.focus.element
-        || target === Terminal.focus.context
-        || target === Terminal.focus.document
-        || target === Terminal.focus.body
-        || target === Terminal._textarea
-        || target === Terminal.focus.parent) {
-      return Terminal.focus.keyPress(ev);
-    }
-  }, true);
-
-  // If we click somewhere other than a
-  // terminal, unfocus the terminal.
-  on(document, 'mousedown', function(ev) {
-    if (!Terminal.focus) return;
-
-    var el = ev.target || ev.srcElement;
-    if (!el) return;
-
-    do {
-      if (el === Terminal.focus.element) return;
-    } while (el = el.parentNode);
-
-    Terminal.focus.blur();
+    console.log("keypress")
+    console.log(ev)
+    //console.log(getChar(ev))
+    //console.log("output", key)
+    console.log("keypress")
+    return Terminal.focus.keyPress(ev)
   });
-};
-
-/**
- * Copy Selection w/ Ctrl-C (Select Mode)
- */
-
-Terminal.bindCopy = function(document) {
-  var window = document.defaultView;
-
-  // if (!('onbeforecopy' in document)) {
-  //   // Copies to *only* the clipboard.
-  //   on(window, 'copy', function fn(ev) {
-  //     var term = Terminal.focus;
-  //     if (!term) return;
-  //     if (!term._selected) return;
-  //     var text = term.grabText(
-  //       term._selected.x1, term._selected.x2,
-  //       term._selected.y1, term._selected.y2);
-  //     term.emit('copy', text);
-  //     ev.clipboardData.setData('text/plain', text);
-  //   });
-  //   return;
-  // }
-
-  // Copies to primary selection *and* clipboard.
-  // NOTE: This may work better on capture phase,
-  // or using the `beforecopy` event.
-  on(window, 'copy', function (ev) {
-    var term = Terminal.focus;
-    if (!term) return;
-    var textarea = term.getCopyTextarea();
-    var text;
-    if (term.isFirefox) {
-      text = Terminal.textSelectionBuffer;
-      Terminal.clearSelection();
-      ev.clipboardData.setData('text/plain', text);
-      ev.preventDefault();
-    } else {
-      if (!term._selected) return;
-      text = term.grabText(
-        term._selected.x1, term._selected.x2,
-        term._selected.y1, term._selected.y2);
-    }
-    term.emit('copy', text);
-    textarea.focus();
-    textarea.textContent = text;
-    textarea.value = text;
-    textarea.setSelectionRange(0, text.length);
-    setTimeout(function () {
-      term.element.focus();
-      term.focus();
-    }, 1);
-  });
-};
-
-/**
- * Fix Mobile
- */
-
-Terminal.prototype.fixMobile = function(document) {
-  var self = this;
-
-  var textarea = document.createElement('textarea');
-  textarea.style.position = 'absolute';
-  textarea.style.left = '-32000px';
-  textarea.style.top = '-32000px';
-  textarea.style.width = '0px';
-  textarea.style.height = '0px';
-  textarea.style.opacity = '0';
-  textarea.style.backgroundColor = 'transparent';
-  textarea.style.borderStyle = 'none';
-  textarea.style.outlineStyle = 'none';
-  textarea.autocapitalize = 'none';
-  textarea.autocorrect = 'off';
-
-  document.getElementsByTagName('body')[0].appendChild(textarea);
-
-  Terminal._textarea = textarea;
-
-  setTimeout(function() {
-    textarea.focus();
-  }, 1000);
-
-  if (this.isAndroid) {
-    on(textarea, 'change', function() {
-      var value = textarea.textContent || textarea.value;
-      textarea.value = '';
-      textarea.textContent = '';
-      self.send(value + '\r');
-    });
-  }
 };
 
 /**
@@ -748,19 +651,6 @@ Terminal.insertStyle = function(document, bg, fg) {
     + '  height: 1px;\n'
     + '  opacity: 0;\n'
     + '}\n';
-
-  // var out = '';
-  // each(Terminal.colors, function(color, i) {
-  //   if (i === 256) {
-  //     out += '\n.term-bg-color-default { background-color: ' + color + '; }';
-  //   }
-  //   if (i === 257) {
-  //     out += '\n.term-fg-color-default { color: ' + color + '; }';
-  //   }
-  //   out += '\n.term-bg-color-' + i + ' { background-color: ' + color + '; }';
-  //   out += '\n.term-fg-color-' + i + ' { color: ' + color + '; }';
-  // });
-  // style.innerHTML += out + '\n';
 
   head.insertBefore(style, head.firstChild);
 };
@@ -831,9 +721,6 @@ Terminal.prototype.open = function(parent) {
   if (!('useFocus' in this.options) || this.options.useFocus) {
     // Ensure there is a Terminal.focus.
     this.focus();
-
-    // Start blinking the cursor.
-    //this.startBlink();
 
     // Bind to DOM events related
     // to focus and paste behavior.
@@ -1440,25 +1327,7 @@ Terminal.prototype.showCursor = function() {
   if (!this.cursorState) {
     this.cursorState = 1;
     this.refresh(this.y, this.y);
-  } else {
-    // Temporarily disabled:
-    // this.refreshBlink();
   }
-};
-
-Terminal.prototype.startBlink = function() {
-  if (!this.cursorBlink) return;
-  var self = this;
-  this._blinker = function() {
-    self._cursorBlink();
-  };
-  this._blink = setInterval(this._blinker, 500);
-};
-
-Terminal.prototype.refreshBlink = function() {
-  if (!this.cursorBlink) return;
-  clearInterval(this._blink);
-  this._blink = setInterval(this._blinker, 500);
 };
 
 Terminal.prototype.scroll = function() {
@@ -2507,9 +2376,10 @@ Terminal.prototype.writeln = function(data) {
 // Key Resources:
 // https://developer.mozilla.org/en-US/docs/DOM/KeyboardEvent
 Terminal.prototype.keyDown = function(ev) {
-  console.log('keyDown ');
+  console.log('original keyDown ');
   console.log(ev)
 
+//  return
   var self = this
     , key;
 
@@ -2677,36 +2547,30 @@ Terminal.prototype.keyDown = function(ev) {
         Terminal.updateSelection();
     	  //Command-C
     	  if (ev.keyCode === 67) {
-    		  break;
+    		  return;
     	  }
     	  //Commad-V
     	  if (ev.keyCode === 86) {
-              Terminal.setInputFocus();
-    		  break;
+          Terminal.setInputFocus();
+    		  return;
     	  }
       }
-
-      //Ctrl + Alt => AltGr_key, see more https://en.wikipedia.org/wiki/AltGr_key
-      if (ev.altKey && ev.ctrlKey) {
-        break;
-      }
-
       // a-z and space
       if (ev.ctrlKey) {
         Terminal.updateSelection();
         if (ev.keyCode >= 65 && ev.keyCode <= 90) {
           // Ctrl-A
           if (ev.keyCode === 65) {
-            break;
+            return;
           }
           // Ctrl-V
           if (ev.keyCode === 86) {
             Terminal.setInputFocus();
-            break;
+            return;
           }
           // Ctrl-C
           if (ev.keyCode === 67 && Terminal.textSelectionBuffer.length > 0) {
-            break;
+            return;
           }
           key = String.fromCharCode(ev.keyCode - 64);
         } else if (ev.keyCode === 32) {
@@ -2743,10 +2607,10 @@ Terminal.prototype.keyDown = function(ev) {
   this.emit('key', key, ev);
 
   this.showCursor();
-  console.log('send from keydown')
   this.handler(key);
 
-  return cancel(ev);
+
+  return false;
 };
 
 Terminal.prototype.setgLevel = function(g) {
@@ -2763,43 +2627,32 @@ Terminal.prototype.setgCharset = function(g, charset) {
 
 function getChar(event) {
   if (event.which == null) { // IE
-    if (event.keyCode < 32) {// special symbols
-      return null;
-    }
+    if (event.keyCode < 32) return null; // спец. символ
     return String.fromCharCode(event.keyCode)
   }
 
-  if (event.which != 0 && event.charCode != 0) { // except IE
-    if (event.which < 32) {
-      return null; // special symbols
-    }
-    return String.fromCharCode(event.which); // all other
+  if (event.which != 0 && event.charCode != 0) { // все кроме IE
+    if (event.which < 32) return null; // спец. символ
+    return String.fromCharCode(event.which); // остальные
   }
 
-  return null; // special symbol
+  return null; // спец. символ
 }
 
 Terminal.prototype.keyPress = function(ev) {
-  console.log("keypress")
-  console.log(ev)
+  console.log("hello!!! " + getChar(ev))
 
   cancel(ev);
 
   var key = getChar(ev);
 
-  if (this.selectMode) {
-    this.keySelect(ev, key);
-    return false;
-  }
-
   this.emit('keypress', key, ev);
   this.emit('key', key, ev);
 
   this.showCursor();
-  console.log('send from keypress')
   this.handler(key);
 
-  return false;
+  return cancel(ev);
 };
 
 Terminal.prototype.send = function(data) {
